@@ -17,11 +17,13 @@ jobs:
         with:
           repository: pangin/air-kernel-ko
           ref: korean
-          path: kernel
+          # dir name must match the repo so the Makefile's TARGET (= dir name)
+          # produces air-kernel-ko.gba, which link_kernel.py expects.
+          path: air-kernel-ko
       - name: Ensure python3
         run: (command -v python3) || (apt-get update && apt-get install -y python3) || (sudo dkp-pacman -Sy --noconfirm python || true)
       - name: Build kernel + link ezairkernel.bin
-        working-directory: kernel
+        working-directory: air-kernel-ko
         run: |
           python3 tools/gen_version.py || true
           make
@@ -30,7 +32,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ezairkernel-bin
-          path: kernel/ezairkernel.bin
+          path: air-kernel-ko/ezairkernel.bin
 
   test-emulator:
     name: Run harness scenarios
