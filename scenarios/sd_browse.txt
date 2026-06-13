@@ -1,0 +1,8 @@
+# Reach menu, switch NOR_list -> SD_list, capture the Korean file list.
+frames 180
+tap 0x2 8 8
+frames 400
+tap 0x100 8 10
+frames 200
+shot sd_list
+assert_nonblank sd_list 0x0 0x14 0xF0 0x60

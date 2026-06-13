@@ -1,0 +1,26 @@
+# Boot -> settings -> switch UI to Korean -> save to NOR -> reset -> verify persisted.
+frames 180
+tap 0x2 8 10
+frames 400
+tap 0x100 8 12
+frames 120
+tap 0x100 8 12
+frames 200
+shot set_enter
+tap 0x80 8 12
+tap 0x80 8 12
+shot set_langrow
+tap 0x1 8 12
+shot set_edit
+tap 0x10 8 12
+tap 0x10 8 12
+shot set_korean_pick
+tap 0x1 8 12
+frames 60
+shot set_saved
+reset
+frames 180
+tap 0x2 8 10
+frames 400
+shot menu_korean_after_reset
+assert_nor16 0x7C0000 0xE3E3

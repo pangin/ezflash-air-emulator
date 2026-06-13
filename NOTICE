@@ -1,0 +1,21 @@
+ezflash-air-emulator
+Copyright 2026 pangin
+
+This product includes software developed as a hardware test harness for the
+EZ-FLASH Air Korean kernel (https://github.com/pangin/air-kernel-ko).
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+--------------------------------------------------------------------------------
+Third-party components
+--------------------------------------------------------------------------------
+
+mGBA  (third_party/mgba, git submodule, unmodified)
+  Copyright (c) 2013-2025 Jeffrey Pfau
+  Licensed under the Mozilla Public License, Version 2.0.
+  https://github.com/mgba-emu/mgba  —  https://mozilla.org/MPL/2.0/
+
+  mGBA is used as an unmodified upstream submodule and linked as a static
+  library. This repository contains no modifications to mGBA source; the
+  EZ-FLASH Air device model lives entirely in this project's own src/ files
+  and attaches to mGBA's public API at runtime.

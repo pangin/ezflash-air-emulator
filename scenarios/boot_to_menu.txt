@@ -1,0 +1,7 @@
+# FW update screen settles, capture it, press B to cancel, reach the menu.
+frames 180
+shot fw
+tap 0x2 8 8
+frames 500
+shot menu
+assert_nonblank menu 0x0 0x0 0xF0 0xA0

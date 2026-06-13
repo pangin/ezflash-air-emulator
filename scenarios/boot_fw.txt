@@ -1,0 +1,5 @@
+# Cold boot reaches the FW-update screen and renders text (CRC32 of the
+# bitstream copy at 0x08195000 must pass, else this is the crc-error screen).
+frames 180
+shot fw_screen
+assert_nonblank fw_screen 0x30 0x4 0xA0 0xC
