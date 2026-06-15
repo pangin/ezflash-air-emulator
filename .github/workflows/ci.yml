@@ -49,14 +49,18 @@ jobs:
         with:
           name: ezairkernel-bin
           path: work
-      - name: Configure + build harness
+      - name: Configure + build harness + cart-core test
         run: |
           cmake -S . -B build/super -G Ninja -DCMAKE_BUILD_TYPE=Debug
-          ninja -C build/super ezair-runner
+          ninja -C build/super ezair-runner ez_cart_test
+      - name: Cart-core unit tests (mGBA-free)
+        run: ctest --test-dir build/super --output-on-failure
       - name: Make SD image (FAT32, Korean filenames)
         run: bash tools/make_sd_image.sh work/sd.img
       - name: Run scenarios
         run: bash tools/run_tests.sh work/ezairkernel.bin
+      - name: Advanced regression (help-freeze fixed + game boot)
+        run: bash tools/run_regression.sh work/ezairkernel.bin
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
