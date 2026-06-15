@@ -1,0 +1,20 @@
+# Demonstration of the Read_FPGA_ver help-window freeze (UNFIXED kernel).
+#
+# Read_FPGA_ver() (called only from the HELP window) ends by leaving the cart in
+# GAME mode and returns into ROM-resident code; with the emulator's ROM-bank
+# model the prefetch then hits the self-branch fill page and the CPU wedges, so
+# the HELP hotkey table is never drawn.
+#
+# Run against the pre-fix kernel (work/ezairkernel_buggy.bin) via
+# tools/help_regression.sh. Same navigation as scenarios/help_fixed.txt; only the
+# assertion is inverted (the help text region must stay blank = frozen).
+frames 180
+tap 0x2 8 10          # B: cancel the FW-update prompt
+frames 450
+tap 0x100 8 12        # R -> SD_list
+tap 0x100 8 12        # R -> SET_win
+tap 0x100 8 12        # R -> HELP: Read_FPGA_ver leaves GAME mode -> freeze on return
+frames 150
+shot help_buggy
+# The hotkey "value" column never rendered because the CPU wedged in Show_ver.
+assert_blank help_buggy 0x5C 0x28 0x60 0x28

@@ -1,0 +1,33 @@
+# End-to-end game boot: load testrom.gba from SD into NOR, then boot it.
+#
+# Proves the emulator's faithful NOR page banking: the kernel writes the game to
+# NOR at First_game_address (0x800000, rompage 0x40) via the paged 8 MB window,
+# and SetRompageWithHardReset(0x40, GAME) banks it in at 0x08000000. The booted
+# ROM fills the screen solid green (0x03E0), distinct from the kernel's blue menu.
+#
+# Run against the fixed kernel with the game SD image:
+#   build/super/ezair-runner work/ezairkernel.bin --sd work/sd_game.img \
+#       --scenario tests/regression/game_boot.txt --out out
+frames 180
+tap 0x2 8 10          # B: cancel the FW-update prompt
+frames 450            # reach the (empty) NOR list
+tap 0x100 8 12        # R -> SD_list
+frames 90
+shot gb_sd
+tap 0x80 8 12         # DOWN: past the SAVER folder onto testrom.gba
+frames 30
+tap 0x1 8 12          # A -> SD_list_MENU (row 0 = load to NOR)
+frames 60
+tap 0x1 8 12          # A -> load testrom.gba to NOR -> returns to NOR_list
+frames 360            # NOR erase + program takes time
+shot gb_loaded
+# game data really landed at First_game_address (0x800000): entry word 0x002E.
+assert_nor16 0x800000 0x002E
+tap 0x1 8 12          # A on the NOR game -> NOR_list_MENU (row 0 = boot)
+frames 60
+tap 0x1 8 12          # A -> Boot_NOR_game -> reset into GAME mode
+frames 300
+shot gb_booted
+# The booted ROM paints the screen green; the kernel menu is blue. mGBA expands
+# BGR555 green (0x03E0) to ~ (R=0, G=255, B=0).
+assert_color gb_booted 0x78 0x50 0x00 0xFF 0x00

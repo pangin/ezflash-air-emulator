@@ -37,9 +37,13 @@
 #define GBA_H 160
 #define FB_STRIDE 256
 
-// Silence mGBA's default logger (DMA/SWI/STUB chatter floods stderr).
+// Silence mGBA's default logger (DMA/SWI/STUB chatter floods stderr) unless the
+// EZAIR_MGBALOG env var is set, in which case forward warnings/errors — useful
+// for diagnosing a guest crash (out-of-bounds reads, bad SWIs).
+static int s_mgba_log;
 static void noop_log(struct mLogger* l, int cat, enum mLogLevel lvl, const char* fmt, va_list a) {
-	(void) l; (void) cat; (void) lvl; (void) fmt; (void) a;
+	(void) l; (void) cat;
+	if (s_mgba_log && lvl >= mLOG_WARN) { vfprintf(stderr, fmt, a); fputc('\n', stderr); }
 }
 static struct mLogger s_logger = { .log = noop_log };
 
@@ -125,6 +129,28 @@ static void exec_line(char* line) {
 		int w = (int) hexnum(strtok(NULL, " \t\r\n")), h = (int) hexnum(strtok(NULL, " \t\r\n"));
 		if (region_uniform(x, y, w, h)) { fprintf(stderr, "[FAIL] %s: region uniform (blank)\n", name); s_fails++; }
 		else fprintf(stderr, "[ok] %s: rendered\n", name);
+	} else if (!strcmp(tok, "assert_blank")) {
+		// Inverse of assert_nonblank: fail if the region rendered anything. Used by
+		// the help-freeze regression to assert the help text NEVER drew (the CPU
+		// wedged in Read_FPGA_ver before drawing it).
+		char* name = strtok(NULL, " \t\r\n");
+		int x = (int) hexnum(strtok(NULL, " \t\r\n")), y = (int) hexnum(strtok(NULL, " \t\r\n"));
+		int w = (int) hexnum(strtok(NULL, " \t\r\n")), h = (int) hexnum(strtok(NULL, " \t\r\n"));
+		if (!region_uniform(x, y, w, h)) { fprintf(stderr, "[FAIL] %s: region rendered (expected blank)\n", name); s_fails++; }
+		else fprintf(stderr, "[ok] %s: blank\n", name);
+	} else if (!strcmp(tok, "assert_color")) {
+		// Assert a single pixel approximately equals an R,G,B triple (tolerance 40).
+		// Used by the game-boot test to prove the booted game's solid screen color
+		// (which assert_nonblank cannot, since a uniform fill reads as "blank").
+		char* name = strtok(NULL, " \t\r\n");
+		int x = (int) hexnum(strtok(NULL, " \t\r\n")), y = (int) hexnum(strtok(NULL, " \t\r\n"));
+		int r = (int) hexnum(strtok(NULL, " \t\r\n")), g = (int) hexnum(strtok(NULL, " \t\r\n")), b = (int) hexnum(strtok(NULL, " \t\r\n"));
+		size_t stride; const color_t* px = frame_pixels(&stride);
+		uint32_t p = px[y * stride + x];
+		int pr = p & 0xFF, pg = (p >> 8) & 0xFF, pb = (p >> 16) & 0xFF, tol = 40;
+		if (abs(pr - r) <= tol && abs(pg - g) <= tol && abs(pb - b) <= tol)
+			fprintf(stderr, "[ok] %s: pixel (%d,%d,%d)\n", name, pr, pg, pb);
+		else { fprintf(stderr, "[FAIL] %s: pixel (%d,%d,%d) != (%d,%d,%d)\n", name, pr, pg, pb, r, g, b); s_fails++; }
 	} else if (!strcmp(tok, "log")) {
 		fprintf(stderr, "[log] %s\n", strtok(NULL, "\r\n") ? tok + 4 : "");
 	} else {
@@ -135,6 +161,7 @@ static void exec_line(char* line) {
 int main(int argc, char** argv) {
 	const char *kernel = NULL, *sd = NULL, *scenario = NULL;
 	int trace = 0;
+	s_mgba_log = getenv("EZAIR_MGBALOG") != NULL;
 	for (int i = 1; i < argc; ++i) {
 		if (!strcmp(argv[i], "--sd") && i + 1 < argc) sd = argv[++i];
 		else if (!strcmp(argv[i], "--scenario") && i + 1 < argc) scenario = argv[++i];

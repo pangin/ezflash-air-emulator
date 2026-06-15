@@ -1,0 +1,18 @@
+# Permanent regression gate for the Read_FPGA_ver help-window freeze.
+#
+# With the kernel fix (Ezcard_OP.c: Read_FPGA_ver restores OS mode instead of
+# leaving the cart in GAME mode), entering the HELP page draws its hotkey table
+# normally. This runs in the default scenario sweep against the CI-built kernel,
+# so it stays green only as long as the fix is present.
+#
+# Page order: NOR_list(0) -> SD_list(1) -> SET_win(2) -> HELP(3).
+frames 180
+tap 0x2 8 10          # B: cancel the FW-update prompt
+frames 450
+tap 0x100 8 12        # R -> SD_list
+tap 0x100 8 12        # R -> SET_win
+tap 0x100 8 12        # R -> HELP: Show_help_window draws the hotkey table
+frames 150
+shot help_fixed
+# The hotkey "value" column (Reset hotkey / Cheat toggle / ...) must have rendered.
+assert_nonblank help_fixed 0x5C 0x28 0x60 0x28
