@@ -36,15 +36,32 @@ set(M_CORE_GBA    ON  CACHE BOOL "" FORCE)
 
 add_subdirectory(third_party/mgba EXCLUDE_FROM_ALL)
 
+# --- EZ-FLASH Air cartridge model: pure, core-agnostic static library ---
+# Built with NO mGBA include path, so the one-way dependency (adapter -> cart)
+# is enforced by the build itself: ez_cart.c cannot accidentally use mGBA.
+add_library(ez_cart STATIC src/ez_cart.c)
+target_include_directories(ez_cart PUBLIC ${CMAKE_SOURCE_DIR}/include)
+
 # The static core target built by mGBA is named "mgba" (libmgba.a).
+# ez_mgba_adapter.c is the only TU that bridges mGBA <-> ez_cart.
 add_executable(ezair-runner
   src/ezair_runner.c
-  src/ezair_device.c
+  src/ez_mgba_adapter.c
 )
 target_include_directories(ezair-runner PRIVATE
+  ${CMAKE_SOURCE_DIR}/include
   ${CMAKE_SOURCE_DIR}/third_party/mgba/include
   ${CMAKE_BINARY_DIR}/third_party/mgba/include
 )
 # IMPORTANT: match libmgba's color ABI. This build does NOT define COLOR_16_BIT
 # (only BUILD_BBB/RASPI/PANDORA would), so color_t == uint32_t. Do not define it.
-target_link_libraries(ezair-runner PRIVATE mgba)
+target_link_libraries(ezair-runner PRIVATE ez_cart mgba)
+
+# --- cart-core unit tests (mGBA-free) ---
+# Links ONLY ez_cart, so it builds and runs in seconds without the GBA core.
+include(CTest)
+if(BUILD_TESTING)
+  add_executable(ez_cart_test tests/ez_cart_test.c)
+  target_link_libraries(ez_cart_test PRIVATE ez_cart)
+  add_test(NAME ez_cart_test COMMAND ez_cart_test)
+endif()
